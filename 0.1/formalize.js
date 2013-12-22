@@ -99,23 +99,47 @@ KISSY.add(function(S, D, E, IO) {
              */
             this._fields = {}
         },
-        // TODO 添加attach的时候可能已经添加了一些自定义的数据。需要校验是否重复了。
-        // 重复的话，怎么处理？
-        // 以实际的表单为主！
+        /**
+         * 设置form表单。
+         * @param form
+         */
         attach: function(form) {
+            var self = this;
+
             this.elForm = form;
 
             this.IOSetup = S.merge(defIO, {
                 url: form.action,
                 type: form.method
             });
+
+            // 若表单中的数据与_fields有相同的数据，以表单数据为主。
+            S.each(this._fields, function(map, name) {
+                var field = self._getFieldByElement(name);
+                if(field) {
+                    map.field = field;
+                }
+            });
         },
+        /**
+         * 根据name获取field对象。
+         * 先从_fields中获取数据，若没有，会再尝试从注册的form表单中查找。
+         * @param name
+         * @returns {*}
+         */
         getField: function(name) {
             var self = this,
                 map = self._fields[name];
 
             return map ? map.field : self._getFieldByElement(name);
         },
+        /**
+         * 根据name设置field对象和events。
+         * 会替换原有的field对象，添加新的事件（不替换）。
+         * @param name
+         * @param field
+         * @param events
+         */
         setField: function(name, field, events) {
             var self = this;
 
@@ -125,6 +149,12 @@ KISSY.add(function(S, D, E, IO) {
                 self._attachEvents(name, type, fn);
             });
         },
+        /**
+         * 添加一个field对象。不允许存在相同的field对象。
+         * @param name
+         * @param field
+         * @param events
+         */
         addField: function(name, field, events) {
 
             if(this.getField(name)) {
@@ -133,21 +163,39 @@ KISSY.add(function(S, D, E, IO) {
 
             this.setField(name, field, events);
         },
+        /**
+         * 设置指定field对象的value
+         * @param name
+         * @param value
+         */
         setValue: function(name, value) {
             var field = this.getField(name);
 
             field && field.setValue(value);
         },
+        /**
+         * 获取指定field对象的value值
+         * @param name
+         * @returns {*}
+         */
         getValue: function(name) {
             var field = this.getField(name);
 
             return field && field.getValue(value);
         },
+        /**
+         * 设置field对象为不可用状态。
+         * @param name
+         */
         fieldDisable: function(name) {
             var field = this.getField(name);
 
             field && field.disable();
         },
+        /**
+         * 设置field对象为可用状态。
+         * @param name
+         */
         fieldEnable: function(name) {
             var field = this.getField(name);
 
@@ -197,6 +245,18 @@ KISSY.add(function(S, D, E, IO) {
         validate: function() {
 
         },
+        /**
+         * 表单提交
+         * @param config
+         * 同步支持的配置为：
+         * {
+         *     async: true/false,
+         *     url: "",
+         *     type: "",
+         *     data: {}
+         * }
+         * 异步支持的配置： async以及IO的配置。
+         */
         submit: function(config) {
             if(this.disabled) return;
 
@@ -258,6 +318,13 @@ KISSY.add(function(S, D, E, IO) {
 
             IO(cfg);
         },
+        /**
+         * 从form表单中获取表单域元素。
+         * 然后设置渲染表单域为field对象并返回。
+         * @param name
+         * @returns {*|boolean|*}
+         * @private
+         */
         _getFieldByElement: function(name) {
             var elements = this._getOriginElements(name);
 
@@ -265,6 +332,13 @@ KISSY.add(function(S, D, E, IO) {
                 elements.length > 0 &&
                 this._decorateFactory(elements);
         },
+        /**
+         * 获取指定name的原生表单域元素
+         * 若不存在对应的表单域，则返回undefined；若存在，则返回数组。
+         * @param name
+         * @returns {*}
+         * @private
+         */
         _getOriginElements: function(name) {
             var elForm = this.elForm;
 
@@ -274,6 +348,7 @@ KISSY.add(function(S, D, E, IO) {
 
             if(!elements) return;
 
+            // 处理一下select表单域，否则makeArray会取出option来。
             if(elements.tagName && elements.tagName.toLowerCase() === "select") {
                 elements = [elements];
             }
@@ -312,6 +387,13 @@ KISSY.add(function(S, D, E, IO) {
 
             return instance;
         },
+        /**
+         * 设置_fields的数据成员 （field属性）。
+         * @param name
+         * @param field
+         * @returns {*}
+         * @private
+         */
         _attachField: function(name, field) {
             var map = this._makeFieldMap(name);
 
@@ -319,6 +401,14 @@ KISSY.add(function(S, D, E, IO) {
 
             return map;
         },
+        /**
+         * 设置_fields的数据成员（events属性）
+         * @param name
+         * @param type
+         * @param fn
+         * @returns {*}
+         * @private
+         */
         _attachEvents: function(name, type, fn) {
             var map = this._makeFieldMap(name);
 
@@ -328,6 +418,12 @@ KISSY.add(function(S, D, E, IO) {
 
             return map;
         },
+        /**
+         * 包装一个_fields的数据对象。
+         * @param name
+         * @returns {*}
+         * @private
+         */
         _makeFieldMap: function(name) {
             var map = this._fields[name];
 
@@ -343,6 +439,12 @@ KISSY.add(function(S, D, E, IO) {
 
             return map;
         },
+        /**
+         * 若在同步提交之前没有设置过form
+         * 则在提交前构建出form来实现同步提交。
+         * @returns {*}
+         * @private
+         */
         _createForm: function() {
             var elForm = D.create("<form></form>");
 
