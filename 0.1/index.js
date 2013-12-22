@@ -3,27 +3,122 @@
  * @author 阿克<ake.wgk@taobao.com>
  * @module formalize
  **/
-KISSY.add(function (S, Node,Base) {
-    var EMPTY = '';
-    var $ = Node.all;
-    /**
-     * 
-     * @class Formalize
-     * @constructor
-     * @extends Base
-     */
-    function Formalize(comConfig) {
-        var self = this;
-        //调用父类构造函数
-        Formalize.superclass.constructor.call(self, comConfig);
+KISSY.add(function (S, D, Formalize) {
+
+    function Field(elems) {
+        this.elements = elems;
     }
-    S.extend(Formalize, Base, /** @lends Formalize.prototype*/{
 
-    }, {ATTRS : /** @lends Formalize*/{
+    S.augment(Field, {
+        setValue: function(val) {
+            D.val(this.elements, val);
+        },
+        getValue: function() {
 
-    }});
+            return D.val(this.elements);
+        },
+        enable: function() {
+            D.prop(this.elements, 'disabled', false);
+        },
+        disable: function() {
+            D.prop(this.elements, 'disabled', true);
+        }
+    });
+
+    Formalize.addClass('text', Field);
+
+    function Checkbox(elements) {
+        this.elements = elements;
+    }
+
+    S.extend(Checkbox, Field, {
+        getValue: function() {
+            var rt = [];
+
+            S.each(this.elements, function(elem) {
+                var checked = D.prop(elem, 'checked');
+
+                if(checked) {
+                    rt.push(D.val(elem));
+                }
+            });
+
+            return rt;
+        },
+        setValue: function(values) {
+            var vals = S.makeArray(values);
+
+            S.each(this.elements, function(elem) {
+                var val = elem.value;
+
+                D.prop(elem, 'checked', S.inArray(val, vals));
+            });
+        }
+    });
+
+    Formalize.addClass('checkbox', Checkbox);
+
+    function Radio(elements) {
+        this.elements = elements;
+    }
+
+    S.extend(Radio, Field, {
+        getValue: function() {
+            var val;
+
+            S.each(this.elements, function(elem) {
+                if(D.prop(elem, 'checked')) {
+                    val = D.val(elem);
+                    return false;
+                }
+            });
+
+            return val;
+        },
+        setValue: function(value) {
+            S.each(this.elements, function(elem) {
+                if(D.val(elem) === value) {
+                    D.prop(elem, 'checked', true);
+                    return false;
+                }
+            });
+        }
+    });
+
+    Formalize.addClass('radio', Radio);
+
+    function Select(elements) {
+        this.elements = elements;
+    }
+
+    S.extend(Select, Field, {
+        getValue: function() {
+            var el = this.elements[0],
+                option = el.options[el.selectedIndex];
+
+            return option.value;
+        },
+        setValue: function(value) {
+            var el = this.elements[0],
+                options = el.options,
+                idx = el.selectedIndex;
+
+            S.each(options, function(option, i) {
+                if(D.val(option) === value) {
+                    idx = i;
+                    return false;
+                }
+            });
+
+            el.selectedIndex = idx;
+        }
+    });
+
+    Formalize.addClass('select', Select);
+
     return Formalize;
-}, {requires:['node', 'base']});
+
+}, {requires:["dom", "./formalize"]});
 
 
 

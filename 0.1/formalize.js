@@ -1,53 +1,20 @@
 /**
  * 对表单和表单域的操作。
  *
- * 表单绑定可以延后到调用submit方法时再绑定。
- * 获取form的表单元素自然是需要绑定以后才能获取到，否则只能获取手动设置的伪表单域。
- *
- * 只是为了表单提交的数据，可以直接设置隐藏域。是否有必要支持添加指定类型的表单域？
- *
- * 获取和设置表单域值。
+ * 设置数据，作为伪表单。
+ * 添加表单域（指定的表单类型）
  * 支持表单域校验。
- * 表单状态控制。
  *
  *＝＝＝＝＝＝＝＝＝＝＝＝＝＝
  *
  * 支持表单域的关联数据更新？update
  *
- *
  * 支持约定接口的自定义表单组件。（需要根据需要实现：getValue、setValue、disable、enable、update、validate等接口方法）
  *
  * 提供事件管理？radio的checked事件等。
  *
- *＝＝＝＝＝＝＝＝＝＝＝＝＝＝
- *
- * 是否统一包装成field对象，还是保持原生表单域的get/set？
  */
 KISSY.add(function(S, D, E, IO) {
-
-    function Field() {
-        this._init.apply(this, arguments);
-    }
-
-    S.augment(Field, {
-        _init: function(elems) {
-            this.elements = S.makeArray(elems);
-        },
-        setValue: function(val) {
-            D.val(this.elements, val);
-        },
-        getValue: function() {
-            return S.map(this.elements, function(elem) {
-                return D.val(elem);
-            });
-        },
-        enable: function() {
-            D.prop(this.elements, 'disabled', false);
-        },
-        disable: function() {
-            D.prop(this.elements, 'disabled', true);
-        }
-    });
 
     /**
      * 判断表单元素判断类型。与Field对象类对应。
@@ -70,7 +37,7 @@ KISSY.add(function(S, D, E, IO) {
 
         var tagName = elem.tagName.toLowerCase(),
             attrType = D.attr(elem, "type"),
-            type = "hidden";
+            type;
 
         if(tagName == "input") {
             if(S.inArray(attrType, typeAsTypeAttribute)) {
@@ -116,6 +83,8 @@ KISSY.add(function(S, D, E, IO) {
             }
 
             this.cfg = cfg;
+            this._disableMap = {};
+            this.disabled = false;
 
             /**
              * {
@@ -189,18 +158,48 @@ KISSY.add(function(S, D, E, IO) {
          * 多个模块都控制form表单的可用状态时，需要区分判断，否则会相互影响。
          */
         disable: function(reason) {
+            var map = this._disableMap;
 
+            map[reason] = true;
+
+            if(!this.disabled) {
+                this._disable(true);
+            }
         },
         enable: function(reason) {
+            var map = this._disableMap,
+                enable = true;
 
-        },
-        fieldValidate: function() {
+            delete map[reason];
 
+            S.each(map, function(disabled) {
+                if(disabled) {
+                    enable = false;
+                    return false;
+                }
+            });
+
+            if(enable && this.disabled) {
+                this._disable(false);
+            }
         },
+        _disable: function(disabled) {
+
+            this.disabled = disabled;
+
+            this.fire("disabled");
+        },
+//        fieldValidate: function(name) {
+//            var field = this.getField(name);
+//
+//            return field.validate && field.validate();
+//        },
         validate: function() {
 
         },
         submit: function(config) {
+            if(this.disabled) return;
+
             var async = (config && config.async) || this.cfg.async;
 
             if(this.validate() === false) {
@@ -275,6 +274,10 @@ KISSY.add(function(S, D, E, IO) {
 
             if(!elements) return;
 
+            if(elements.tagName && elements.tagName.toLowerCase() === "select") {
+                elements = [elements];
+            }
+
             return S.filter(S.makeArray(elements), function(element) {
                 return element &&
                     // 过滤掉object元素
@@ -289,6 +292,8 @@ KISSY.add(function(S, D, E, IO) {
          * @private
          */
         _decorateFactory: function(elements) {
+            if(!elements || !elements[0]) return;
+
             var elTest = elements[0],
                 name = elTest.name,
                 type = _getFieldType(elTest);
@@ -348,9 +353,16 @@ KISSY.add(function(S, D, E, IO) {
     });
 
     S.mix(Formalize, {
-        _FIELDS: {
-            text: Field
-        }
+        addClass: function(key, cls) {
+            var c = this._FIELDS[key];
+
+            if(c) {
+                throw new Error("exists Field Class");
+            }
+
+            this._FIELDS[key] = cls;
+        },
+        _FIELDS: {}
     });
 
     return Formalize;
