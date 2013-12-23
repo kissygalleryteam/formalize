@@ -1,7 +1,6 @@
 /**
  * 对表单和表单域的操作。
  *
- * 设置数据，作为伪表单。
  * 添加表单域（指定的表单类型）
  * 支持表单域校验。
  *
@@ -72,6 +71,14 @@ KISSY.add(function(S, D, E, IO) {
         }
 
         return type;
+    }
+
+    var methods = ["getValue", 'setValue', 'disable', 'enable'];
+    function isField(o) {
+        return S.every(methods, function(name) {
+            var method = o[name];
+            return method && S.isFunction(method);
+        });
     }
 
     var def = {
@@ -182,17 +189,13 @@ KISSY.add(function(S, D, E, IO) {
                 self._attachEvents(name, type, fn);
             });
         },
-        /**
-         * 添加一个field对象。不允许存在相同的field对象。
-         * 传入一个表单元素以及配置。可配置events事件（update、validate）
-         */
-        addField: function(elem, cfg) {
+        addField: function(name, field, events) {
+            if(!field || !isField(field)) {
+                return;
+            }
 
-            if(this.getField(name)) return;
+            this.setField(name, field, events);
 
-            var field = this._takeFieldByElement(elem);
-
-            this.setField(name, field, cfg && cfg.events);
             return field;
         },
         /**
@@ -213,7 +216,7 @@ KISSY.add(function(S, D, E, IO) {
         getValue: function(name) {
             var field = this.getField(name);
 
-            return field && field.getValue(value);
+            return field && field.getValue();
         },
         /**
          * 设置field对象为不可用状态。
@@ -320,7 +323,7 @@ KISSY.add(function(S, D, E, IO) {
                     var el = self._createElement(name, val);
                     fragment.appendChild(el);
 
-                    self.addField(el);
+                    self._addFieldByElement(el);
                 });
 
                 elForm.appendChild(fragment);
@@ -352,6 +355,19 @@ KISSY.add(function(S, D, E, IO) {
             }
 
             IO(cfg);
+        },
+        /**
+         * 添加field对象。不允许存在相同的field对象。
+         * 传入一个表单元素以及配置。可配置events事件（update、validate）
+         */
+        _addFieldByElement: function(elem, events) {
+            var name = elem.name;
+
+            if(this.getField(name)) return;
+
+            var field = this._takeFieldByElement(elem);
+
+            return this.addField(name, field, events);
         },
         /**
          * 从form表单中获取表单域元素。

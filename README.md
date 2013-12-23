@@ -8,6 +8,10 @@ Formalize组件用于简化表单和表单域的操作。
 
 ## changelog
 
+### V0.2
+    [+] 支持自定义表单域。（需实现getValue/setValue/disable/enable几个接口）
+    [*] 完善部分方法
+
 ### V0.1
     [+] 提供基于表单的同步和异步提交处理
     [+] 提供基于name值筛选的表单域获取方式。包装为field对象返回。

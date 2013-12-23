@@ -64,6 +64,7 @@
 
     </fieldset>
 
+    <div id="result-aa">aa</div>
 
 </form>
 
@@ -126,12 +127,33 @@
 
         console.log(S.clone(fake._fields));
 
-        var el = D.create('<input name="new1" type="text" />');
+        var el = D.create('<input name="new1" type="text"  value="" />');
         elForm.appendChild(el);
-        fake.addField(el).setValue("new value");
+
+        // 一旦添加到对应的form表单中，就直接可以调用对应的方法来操作表单域～
+        fake.setValue("new1", 'new value');
 
         console.log(S.clone(fake._fields));
 
+        fake.addField('aa', {
+            elem: D.get("#result-aa"),
+            getValue: function() {
+                return D.text(this.elem);
+            },
+            setValue: function(val) {
+                D.text(this.elem, val);
+            },
+            enable: function() {
+                D.show(this.elem);
+            },
+            disable: function() {
+                D.hide(this.elem);
+            }
+        });
+
+        console.log(fake.getValue('aa'));
+        fake.setValue('aa', '55');
+        console.log(fake.getValue('aa'));
 
         setTimeout(function() {
             fake.getField('text1').setValue("2222");
