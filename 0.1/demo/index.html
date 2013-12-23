@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Formalize的demo</title>
+    <script src="http://g.tbcdn.cn/kissy/k/1.4.1/seed.js" charset="utf-8"></script>
+    <link rel="stylesheet" href="http://g.tbcdn.cn/kissy/k/1.3.0/css/dpl/base-min.css">
+</head>
+<body>
+<h2>Formalize的demo</h2>
+
+
+<form action="data.json">
+
+    <fieldset id="demo1">
+        <legend>text</legend>
+        <input type="text" name="text1" disabled="disabled" />
+
+        <div class="result"></div>
+    </fieldset>
+
+    <fieldset id="demo2">
+        <legend>radio</legend>
+
+        <input type="radio" name="radio1" value="1"/>
+        <input type="radio" name="radio1" value="2"/>
+        <input type="radio" name="radio1" value="3"/>
+
+        <div class="result"></div>
+
+    </fieldset>
+
+    <fieldset id="demo3">
+        <legend>checkbox</legend>
+
+        <input type="checkbox" name="checkbox1" value="1"/>
+        <input type="checkbox" name="checkbox1" value="2"/>
+        <input type="checkbox" name="checkbox1" value="3"/>
+        <input type="checkbox" name="checkbox1" value="4"/>
+
+        <div class="result"></div>
+
+    </fieldset>
+
+    <fieldset id="demo4">
+        <legend>checkbox</legend>
+
+        <input type="checkbox" name="checkbox2" value="5"/>
+
+        <div class="result"></div>
+
+    </fieldset>
+
+    <fieldset id="demo5">
+        <legend>select</legend>
+
+        <select name="select1" id="">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+        </select>
+
+        <div class="result"></div>
+
+    </fieldset>
+
+
+</form>
+
+
+<script>
+    var S = KISSY;
+    if (S.Config.debug) {
+        var srcPath = "../../";
+        S.config({
+            packages:[
+                {
+                    name:"gallery/formalize",
+                    path:srcPath,
+                    charset:"utf-8",
+                    ignorePackageNameInUri:true
+                }
+            ]
+        });
+    }
+
+    S.use('gallery/formalize/0.1/index', function (S, Formalize) {
+        var fake = new Formalize();
+
+        fake.attach(document.forms[0]);
+
+        fake.fieldEnable("text1");
+
+        fake.submit({
+            async: true,
+            url: "data.json",
+            data: {
+                t1: 1,
+                t2: 2
+            },
+            success: function(data) {
+                console.log(data)
+            }
+        });
+
+        fake.disable('1')
+        fake.disable('2')
+        fake.disable('3')
+        fake.enable('1');
+
+        fake.submit();
+
+        fake.getField('text1').setValue("test1");
+        setTimeout(function() {
+            fake.getField('text1').setValue("2222");
+        }, 1000);
+
+        fake.getField('radio1').setValue("2");
+        setTimeout(function() {
+            fake.getField('radio1').setValue("3");
+        }, 1000);
+
+        fake.getField('checkbox1').setValue(["1", "4"]);
+        setTimeout(function() {
+            fake.getField('checkbox1').setValue(["2", "3"]);
+        }, 1000);
+
+        fake.getField('checkbox2').setValue("5")
+        setTimeout(function() {
+            fake.getField('checkbox2').setValue()
+        }, 1000);
+
+        fake.getField('select1').setValue("3");
+        setTimeout(function() {
+            fake.getField('select1').setValue("2")
+        }, 1000);
+    })
+</script>
+</body>
+</html>
