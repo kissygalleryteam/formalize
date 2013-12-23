@@ -30,7 +30,19 @@ KISSY.add(function(S, D, E, IO) {
         inputText = ["color", "date", "datetime", "datetime-local", "email", "month", "number","range", "tel", "time", "url", "week"],
         inputSpec = ['file'],
         typeAsTypeAttribute = inputCheck.concat(inputSpec),
-        typeAsTag = ["button", "select"];
+        typeAsTag = ["button", "select"],
+        // 会被form.elements遍历出来，但是又不是我们需要的表单域类型。
+        typeExclude = ["object", "fieldset"];
+
+    function makeArrayForSelect(element) {
+        var elements = element;
+        // 处理一下select表单域，否则makeArray会取出option来。
+        if(element.tagName && element.tagName.toLowerCase() === "select") {
+            elements = [element];
+        }
+
+        return elements;
+    }
 
     function _getFieldType(elem) {
         if(!elem) return;
@@ -38,6 +50,8 @@ KISSY.add(function(S, D, E, IO) {
         var tagName = elem.tagName.toLowerCase(),
             attrType = D.attr(elem, "type"),
             type;
+
+        if(S.inArray(tagName, typeExclude)) return;
 
         if(tagName == "input") {
             if(S.inArray(attrType, typeAsTypeAttribute)) {
@@ -103,7 +117,7 @@ KISSY.add(function(S, D, E, IO) {
          * 设置form表单。
          * @param form
          */
-        attach: function(form) {
+        attach: function(form, traversal) {
             var self = this;
 
             this.elForm = form;
@@ -120,6 +134,23 @@ KISSY.add(function(S, D, E, IO) {
                     map.field = field;
                 }
             });
+
+            if(traversal) {
+                // 把现有的表单域都添加进来。
+                S.each(form.elements, function(element) {
+                    var type = _getFieldType(element);
+
+                    if(!type) return;
+
+                    var name = element.name,
+                        field = self.getField(name);
+
+                    if(!field) {
+                        field = self._getFieldByElement(name);
+                        self.addField(name, field);
+                    }
+                });
+            }
         },
         /**
          * 根据name获取field对象。
@@ -143,7 +174,7 @@ KISSY.add(function(S, D, E, IO) {
         setField: function(name, field, events) {
             var self = this;
 
-            this._attachField(name, field);
+            self._attachField(name, field);
 
             S.each(events, function(fn, type) {
                 self._attachEvents(name, type, fn);
@@ -151,6 +182,8 @@ KISSY.add(function(S, D, E, IO) {
         },
         /**
          * 添加一个field对象。不允许存在相同的field对象。
+         * TODO 通过添加数据来增加field对象。或通过element添加field
+         * TODO 若有重复怎么处理？
          * @param name
          * @param field
          * @param events
@@ -231,6 +264,9 @@ KISSY.add(function(S, D, E, IO) {
                 this._disable(false);
             }
         },
+        getReasons: function() {
+            return this._disableMap;
+        },
         _disable: function(disabled) {
 
             this.disabled = disabled;
@@ -285,6 +321,7 @@ KISSY.add(function(S, D, E, IO) {
                     var el = self._createElement(name, val);
                     fragment.appendChild(el);
 
+                    // TODO
                     self.addField(name, new Field(el));
                 });
 
@@ -348,36 +385,43 @@ KISSY.add(function(S, D, E, IO) {
 
             if(!elements) return;
 
-            // 处理一下select表单域，否则makeArray会取出option来。
-            if(elements.tagName && elements.tagName.toLowerCase() === "select") {
-                elements = [elements];
-            }
+            elements = makeArrayForSelect(elements);
 
             return S.filter(S.makeArray(elements), function(element) {
+                var tag = element.tagName.toLowerCase();
+
                 return element &&
                     // 过滤掉object元素
-                    element.tagName.toLowerCase() !== "object" &&
+                    tag !== "object" &&
+                    tag !== "fieldset" &&
                     // 过滤掉id相同但name不同的元素
                     element.getAttribute("name") === name;
-            })
+            });
         },
         /**
          * 根据元素类型进行渲染。添加到this._fields集合。
-         * @param elements {Array<HTMLElement>} HTMLFormElement对象集合。暂只支持相同name且相同类型的元素集合。
+         * @param elements {Array|<HTMLElementList>|HTMLElement} HTMLFormElement对象集合。暂只支持相同name且相同类型的元素集合。或单个Form表单元素。
+         *
+         * <HTMLElementList>不是数组。但可以直接通过makeArray来转换。
+         * 但是select元素，通过makeArray转换会变成option集合。不符合需要。
+         * issue: https://github.com/kissyteam/kissy/issues/537
          * @private
          */
         _decorateFactory: function(elements) {
-            if(!elements || !elements[0]) return;
+            if(!elements || (elements.length !== undefined && !elements[0])) return;
+
+            elements = makeArrayForSelect(elements);
 
             var elTest = elements[0],
                 name = elTest.name,
                 type = _getFieldType(elTest);
 
             if(!type) {
-                throw new Error("can not match a field class" + type);
+                // object 和 fieldset 这种情况
+                return;
             }
 
-            var fieldClass = Formalize._FIELDS[type];
+            var fieldClass = Formalize.getClass(type);
 
             if(!fieldClass) return;
 
@@ -463,6 +507,9 @@ KISSY.add(function(S, D, E, IO) {
             }
 
             this._FIELDS[key] = cls;
+        },
+        getClass: function(type) {
+            return this._FIELDS[type];
         },
         _FIELDS: {}
     });

@@ -27,11 +27,11 @@ KISSY.add(function (S, D, Formalize) {
 
     Formalize.addClass('text', Field);
 
-    function Checkbox(elements) {
+    function CheckboxField(elements) {
         this.elements = elements;
     }
 
-    S.extend(Checkbox, Field, {
+    S.extend(CheckboxField, Field, {
         getValue: function() {
             var rt = [];
 
@@ -56,13 +56,13 @@ KISSY.add(function (S, D, Formalize) {
         }
     });
 
-    Formalize.addClass('checkbox', Checkbox);
+    Formalize.addClass('checkbox', CheckboxField);
 
-    function Radio(elements) {
+    function RadioField(elements) {
         this.elements = elements;
     }
 
-    S.extend(Radio, Field, {
+    S.extend(RadioField, Field, {
         getValue: function() {
             var val;
 
@@ -85,13 +85,13 @@ KISSY.add(function (S, D, Formalize) {
         }
     });
 
-    Formalize.addClass('radio', Radio);
+    Formalize.addClass('radio', RadioField);
 
-    function Select(elements) {
+    function SelectField(elements) {
         this.elements = elements;
     }
 
-    S.extend(Select, Field, {
+    S.extend(SelectField, Field, {
         getValue: function() {
             var el = this.elements[0],
                 option = el.options[el.selectedIndex];
@@ -114,7 +114,7 @@ KISSY.add(function (S, D, Formalize) {
         }
     });
 
-    Formalize.addClass('select', Select);
+    Formalize.addClass('select', SelectField);
 
     return Formalize;
 
