@@ -35,9 +35,11 @@ KISSY.add(function(S, D, E, IO) {
         typeExclude = ["object", "fieldset"];
 
     function makeArrayForElement(element) {
+        if(!element) return;
+
         var elements = element;
         // 处理一下select表单域，否则makeArray会取出option来。
-        if(element && element.tagName && element.tagName.toLowerCase() === "select") {
+        if(element.tagName && element.tagName.toLowerCase() === "select") {
             elements = [element];
         }
 
@@ -413,10 +415,10 @@ KISSY.add(function(S, D, E, IO) {
             elements = makeArrayForElement(elements);
 
             var elTest = elements[0],
-                name = elTest.name,
+                name = elTest && elTest.name,
                 type = _getFieldType(elTest);
 
-            if(!type) {
+            if(!type || !name) {
                 // object 和 fieldset 这种情况
                 return;
             }
