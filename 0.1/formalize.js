@@ -34,14 +34,14 @@ KISSY.add(function(S, D, E, IO) {
         // 会被form.elements遍历出来，但是又不是我们需要的表单域类型。
         typeExclude = ["object", "fieldset"];
 
-    function makeArrayForSelect(element) {
+    function makeArrayForElement(element) {
         var elements = element;
         // 处理一下select表单域，否则makeArray会取出option来。
-        if(element.tagName && element.tagName.toLowerCase() === "select") {
+        if(element && element.tagName && element.tagName.toLowerCase() === "select") {
             elements = [element];
         }
 
-        return elements;
+        return S.makeArray(elements);
     }
 
     function _getFieldType(elem) {
@@ -129,25 +129,25 @@ KISSY.add(function(S, D, E, IO) {
 
             // 若表单中的数据与_fields有相同的数据，以表单数据为主。
             S.each(this._fields, function(map, name) {
-                var field = self._getFieldByElement(name);
+                var field = self._takeFieldByName(name);
                 if(field) {
                     map.field = field;
                 }
             });
 
             if(traversal) {
-                // 把现有的表单域都添加进来。
+                // 把现有的表单域都添加进来。通过name而不要通过
                 S.each(form.elements, function(element) {
                     var type = _getFieldType(element);
 
                     if(!type) return;
 
                     var name = element.name,
-                        field = self.getField(name);
+                        field = self._fields[name];
 
                     if(!field) {
-                        field = self._getFieldByElement(name);
-                        self.addField(name, field);
+                        // take方法已经实现了添加到 _fields 数据的逻辑
+                        self._takeFieldByName(name);
                     }
                 });
             }
@@ -162,7 +162,7 @@ KISSY.add(function(S, D, E, IO) {
             var self = this,
                 map = self._fields[name];
 
-            return map ? map.field : self._getFieldByElement(name);
+            return map ? map.field : self._takeFieldByName(name);
         },
         /**
          * 根据name设置field对象和events。
@@ -182,19 +182,16 @@ KISSY.add(function(S, D, E, IO) {
         },
         /**
          * 添加一个field对象。不允许存在相同的field对象。
-         * TODO 通过添加数据来增加field对象。或通过element添加field
-         * TODO 若有重复怎么处理？
-         * @param name
-         * @param field
-         * @param events
+         * 传入一个表单元素以及配置。可配置events事件（update、validate）
          */
-        addField: function(name, field, events) {
+        addField: function(elem, cfg) {
 
-            if(this.getField(name)) {
-                throw "exists field";
-            }
+            if(this.getField(name)) return;
 
-            this.setField(name, field, events);
+            var field = this._takeFieldByElement(elem);
+
+            this.setField(name, field, cfg && cfg.events);
+            return field;
         },
         /**
          * 设置指定field对象的value
@@ -321,8 +318,7 @@ KISSY.add(function(S, D, E, IO) {
                     var el = self._createElement(name, val);
                     fragment.appendChild(el);
 
-                    // TODO
-                    self.addField(name, new Field(el));
+                    self.addField(el);
                 });
 
                 elForm.appendChild(fragment);
@@ -362,11 +358,15 @@ KISSY.add(function(S, D, E, IO) {
          * @returns {*|boolean|*}
          * @private
          */
-        _getFieldByElement: function(name) {
+        _takeFieldByName: function(name) {
             var elements = this._getOriginElements(name);
 
-            return elements &&
-                elements.length > 0 &&
+            return this._takeFieldByElement(elements);
+        },
+        _takeFieldByElement: function(element) {
+            var elements = makeArrayForElement(element);
+
+            return elements && elements.length > 0 &&
                 this._decorateFactory(elements);
         },
         /**
@@ -385,7 +385,7 @@ KISSY.add(function(S, D, E, IO) {
 
             if(!elements) return;
 
-            elements = makeArrayForSelect(elements);
+            elements = makeArrayForElement(elements);
 
             return S.filter(S.makeArray(elements), function(element) {
                 var tag = element.tagName.toLowerCase();
@@ -410,7 +410,7 @@ KISSY.add(function(S, D, E, IO) {
         _decorateFactory: function(elements) {
             if(!elements || (elements.length !== undefined && !elements[0])) return;
 
-            elements = makeArrayForSelect(elements);
+            elements = makeArrayForElement(elements);
 
             var elTest = elements[0],
                 name = elTest.name,

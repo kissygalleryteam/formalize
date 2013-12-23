@@ -84,10 +84,13 @@
         });
     }
 
-    S.use('gallery/formalize/0.1/index', function (S, Formalize) {
-        var fake = new Formalize();
+    S.use('gallery/formalize/0.1/index, dom', function (S, Formalize, D) {
+        var fake = new Formalize(),
+            elForm = document.forms[0];
 
-        fake.attach(document.forms[0]);
+        fake.attach(elForm);
+
+        console.log(S.clone(fake._fields))
 
         fake.fieldEnable("text1");
 
@@ -111,29 +114,40 @@
         fake.submit();
 
         fake.getField('text1').setValue("test1");
-        setTimeout(function() {
-            fake.getField('text1').setValue("2222");
-        }, 1000);
 
         fake.getField('radio1').setValue("2");
-        setTimeout(function() {
-            fake.getField('radio1').setValue("3");
-        }, 1000);
 
         fake.getField('checkbox1').setValue(["1", "4"]);
-        setTimeout(function() {
-            fake.getField('checkbox1').setValue(["2", "3"]);
-        }, 1000);
 
         fake.getField('checkbox2').setValue("5")
-        setTimeout(function() {
-            fake.getField('checkbox2').setValue()
-        }, 1000);
 
         fake.getField('select1').setValue("3");
+
+
+        console.log(S.clone(fake._fields));
+
+        var el = D.create('<input name="new1" type="text" />');
+        elForm.appendChild(el);
+        fake.addField(el).setValue("new value");
+
+        console.log(S.clone(fake._fields));
+
+
         setTimeout(function() {
+            fake.getField('text1').setValue("2222");
+
+            fake.getField('radio1').setValue("3");
+
+            fake.getField('checkbox1').setValue(["2", "3"]);
+
+            fake.getField('checkbox2').setValue()
+
             fake.getField('select1').setValue("2")
+
+            fake.setValue('new1', "new again")
+
         }, 1000);
+
     })
 </script>
 </body>
