@@ -8,7 +8,7 @@ Formalize组件用于简化表单和表单域的操作。
 
 ## changelog
 
-### V0.2
+### V0.1.1
     [+] 支持自定义表单域。（需实现getValue/setValue/disable/enable几个接口）
     [*] 完善部分方法
 
