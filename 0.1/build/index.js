@@ -319,7 +319,7 @@ KISSY.add('gallery/formalize/0.1/formalize',function(S, D, E, IO) {
         submit: function(config) {
             if(this.disabled) return;
 
-            var async = (config && config.async) || this.cfg.async;
+            var async = (config && config.async !== undefined) ? config.async : this.cfg.async;
 
             if(this.validate() === false) {
                 return;
