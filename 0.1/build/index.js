@@ -134,13 +134,18 @@ KISSY.add('gallery/formalize/0.1/formalize',function(S, D, E, IO) {
          * @param form
          */
         attach: function(form, traversal) {
-            var self = this;
+            var self = this,
+                url = D.attr(form, 'action');
+
+            if(url == "" || url == "about:blank") {
+                url = location.toString();
+            }
 
             this.elForm = form;
 
             this.IOSetup = S.merge(defIO, {
-                url: form.action,
-                type: form.method
+                url: url,
+                type: D.attr(form, 'method')
             });
 
             // 若表单中的数据与_fields有相同的数据，以表单数据为主。
@@ -196,6 +201,15 @@ KISSY.add('gallery/formalize/0.1/formalize',function(S, D, E, IO) {
                 self._attachEvents(name, type, fn);
             });
         },
+        /**
+         * 添加一个field对象。
+         * field对象是通过属性检测的方式来判断的，所以实现了对应的接口就会被认为是field对象。
+         *      getValue/setValue/enable/disable
+         * @param name
+         * @param field
+         * @param events
+         * @returns {*}
+         */
         addField: function(name, field, events) {
             if(!field || !isField(field)) {
                 return;
@@ -544,6 +558,7 @@ KISSY.add('gallery/formalize/0.1/formalize',function(S, D, E, IO) {
 }, {
     requires: ['dom', 'event', 'ajax']
 });
+
 /**
  * @fileoverview 
  * @author 阿克<ake.wgk@taobao.com>
