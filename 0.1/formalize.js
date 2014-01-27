@@ -45,6 +45,8 @@ KISSY.add(function(S, D, E, IO) {
         return S.makeArray(elements);
     }
 
+    // 識別如下類型表單域：
+    // typeExclude / inputSpec / inputCheck / inputButton / typeAsTag
     function _getFieldType(elem) {
         if(!elem) return;
 
@@ -66,6 +68,7 @@ KISSY.add(function(S, D, E, IO) {
             if(tagName == "textarea") {
                 type = "text";
             }else {
+                // typeAsTag
                 type = tagName;
             }
         }
@@ -84,7 +87,7 @@ KISSY.add(function(S, D, E, IO) {
     var def = {
             // 理想化的表单，name值应该与表单域一一对应（除了radio）。但实际上，我们会发现checkbox也常常会被这样使用。所以本组件定义了name值在相同类型的表单域上是唯一的。当前配置默认为false，表示一个name值可以对应多个相同类型的表单域。若为true则表示可以对应多个不同类型的表单域。
             // 注意：目前不支持配置。强调一下而已。。。
-            polymorphic: false,
+//            polymorphic: false,
             async: true
         },
         defIO = {
@@ -121,24 +124,25 @@ KISSY.add(function(S, D, E, IO) {
              * }
              */
             this._fields = {}
+
+            this._validators = [];
+            this._fnBeforeSubmit = [];
         },
         /**
          * 设置form表单。
          * @param form
+         * @param traversal
          */
         attach: function(form, traversal) {
             var self = this,
-                url = D.attr(form, 'action');
+                elForm = D.get(form),
+                url = D.attr(elForm, 'action');
 
-            if(url == "" || url == "about:blank") {
-                url = location.toString();
-            }
-
-            this.elForm = form;
+            this.elForm = elForm;
 
             this.IOSetup = S.merge(defIO, {
                 url: url,
-                type: D.attr(form, 'method')
+                type: D.attr(elForm, 'method')
             });
 
             // 若表单中的数据与_fields有相同的数据，以表单数据为主。
@@ -150,13 +154,13 @@ KISSY.add(function(S, D, E, IO) {
             });
 
             if(traversal) {
-                // 把现有的表单域都添加进来。通过name而不要通过
+                // 把现有的表单域都添加进来。通过name而不要通过elements遍歷
                 S.each(form.elements, function(element) {
                     var type = _getFieldType(element);
 
                     if(!type) return;
 
-                    var name = element.name,
+                    var name = element.getAttribute(name),
                         field = self._fields[name];
 
                     if(!field) {
@@ -283,19 +287,64 @@ KISSY.add(function(S, D, E, IO) {
         getReasons: function() {
             return this._disableMap;
         },
+        isDisabled: function() {
+            return this.disabled;
+        },
         _disable: function(disabled) {
 
             this.disabled = disabled;
 
             this.fire("disabled");
         },
-//        fieldValidate: function(name) {
-//            var field = this.getField(name);
-//
-//            return field.validate && field.validate();
-//        },
-        validate: function() {
-
+        /**
+         * 需要在表单提交前执行的处理函数。
+         */
+        beforeSubmit: function(fn, args, context) {
+            if(args && !context && !S.isArray(args)) {
+                args = [];
+                context = args;
+            }
+            this._fnBeforeSubmit.push({
+                fn: fn,
+                args: args,
+                context: context
+            });
+        },
+        /**
+         * 在校验前执行的函数队列
+         */
+        onValidate: function(validator, args, context) {
+            if(args && !context && !S.isArray(args)) {
+                args = [];
+                context = args;
+            }
+            this._validators.push({
+                fn: validator,
+                args: args,
+                context: context
+            });
+        },
+        /**
+         * 调用指定的函数
+         * 提交前执行相关函数
+         * @fns {Array} 要执行的函数队列
+         * @failbreak {Boolean} 函数返回值为false时，是否中断列队执行
+         */
+        _invoke: function(fns, failbreak) {
+            var rt = true,
+                self = this;
+            S.each(fns, function(instance) {
+                var fn = instance.fn,
+                    args = instance.args || [],
+                    context = instance.context || self;
+                if(rt && fn.apply(context, args) === false) {
+                    rt = false;
+                    if(failbreak) {
+                        return false;
+                    }
+                }
+            });
+            return rt;
         },
         /**
          * 表单提交
@@ -310,24 +359,38 @@ KISSY.add(function(S, D, E, IO) {
          * 异步支持的配置： async以及IO的配置。
          */
         submit: function(config) {
-            if(this.disabled) return;
+            config || (config = {});
 
-            var async = (config && config.async !== undefined) ? config.async : this.cfg.async;
+            if(this._running || this.isDisabled()) return false;
 
-            if(this.validate() === false) {
+            this.fire('emit', {data: config});
+            this._running = true;
+
+            // 校验前执行。若有校验返回值为false，则中断队列执行，中断提交操作。
+            if(this._invoke(this._validators, true) === false) {
                 return;
             }
 
-            if(async) {
-                this._asyncSubmit(config);
-            }else {
-                this._syncSubmit(config);
+            // 提交前执行的函数
+            // 不在意函数的返回值。也不影响提交操作。
+            this._invoke(this._fnBeforeSubmit);
+
+            var cfg = S.merge(this.IOSetup, config);
+            if(cfg.url == "" || cfg.url == "about:blank") {
+                cfg.url = location.toString();
             }
+
+            if(cfg.async) {
+                this._asyncSubmit(cfg);
+            }else {
+                this._syncSubmit(cfg);
+            }
+
+            return true;
         },
-        _syncSubmit: function(config) {
+        _syncSubmit: function(cfg) {
             var self = this,
-                elForm = self.elForm || self._createForm(),
-                cfg = S.merge(self.IOSetup, config);
+                elForm = self.elForm || self._createForm();
 
             // 如果有新增参数，则构造隐藏域添加到表单中。
             if(cfg.data) {
@@ -359,14 +422,25 @@ KISSY.add(function(S, D, E, IO) {
 
             return el;
         },
-        _asyncSubmit: function(config) {
+        _asyncSubmit: function(cfg) {
             var self = this,
-                elForm = self.elForm,
-                cfg = S.merge(self.IOSetup, config);
+                elForm = self.elForm;
 
             if(elForm) {
                 cfg.form = elForm;
             }
+
+            cfg.success = function(data) {
+                self.fire('success', {config: cfg, data: data});
+            };
+
+            cfg.complete = function() {
+                self._running = false;
+            };
+
+            cfg.error = function() {
+                self.fire('error', {data: cfg});
+            };
 
             IO(cfg);
         },
