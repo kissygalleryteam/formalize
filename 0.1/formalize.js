@@ -368,6 +368,7 @@ KISSY.add(function(S, D, E, IO) {
 
             // 校验前执行。若有校验返回值为false，则中断队列执行，中断提交操作。
             if(this._invoke(this._validators, true) === false) {
+                this._running = false;
                 return;
             }
 
@@ -412,6 +413,7 @@ KISSY.add(function(S, D, E, IO) {
             });
 
             elForm.submit();
+            self._running = false;
         },
         _createElement: function(name, val) {
             var html = S.substitute('<input type="hidden" name="{name}" value="{value}" />', {
@@ -434,15 +436,16 @@ KISSY.add(function(S, D, E, IO) {
                 self.fire('success', {config: cfg, data: data});
             };
 
-            cfg.complete = function() {
-                self._running = false;
-            };
+//            cfg.complete = function() {
+//                self._running = false;
+//            };
 
             cfg.error = function() {
                 self.fire('error', {data: cfg});
             };
 
             IO(cfg);
+            self._running = false;
         },
         /**
          * 添加field对象。不允许存在相同的field对象。
