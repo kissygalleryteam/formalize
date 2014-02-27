@@ -88,7 +88,8 @@ KISSY.add(function(S, D, E, IO) {
             // 理想化的表单，name值应该与表单域一一对应（除了radio）。但实际上，我们会发现checkbox也常常会被这样使用。所以本组件定义了name值在相同类型的表单域上是唯一的。当前配置默认为false，表示一个name值可以对应多个相同类型的表单域。若为true则表示可以对应多个不同类型的表单域。
             // 注意：目前不支持配置。强调一下而已。。。
 //            polymorphic: false,
-            async: true
+            async: true,
+            validate: true
         },
         defIO = {
             type: "get",
@@ -358,7 +359,7 @@ KISSY.add(function(S, D, E, IO) {
          * }
          * 异步支持的配置： async以及IO的配置。
          */
-        submit: function(config) {
+        submit: function(config, ignore) {
             config || (config = {});
 
             if(this._running || this.isDisabled()) return false;
@@ -366,15 +367,17 @@ KISSY.add(function(S, D, E, IO) {
             this.fire('emit', {data: config});
             this._running = true;
 
-            // 校验前执行。若有校验返回值为false，则中断队列执行，中断提交操作。
-            if(this._invoke(this._validators, true) === false) {
-                this._running = false;
-                return;
-            }
+            if(!ignore) {
+                // 校验前执行。若有校验返回值为false，则中断队列执行，中断提交操作。
+                if(this._invoke(this._validators, true) === false) {
+                    this._running = false;
+                    return;
+                }
 
-            // 提交前执行的函数
-            // 不在意函数的返回值。也不影响提交操作。
-            this._invoke(this._fnBeforeSubmit);
+                // 提交前执行的函数
+                // 不在意函数的返回值。也不影响提交操作。
+                this._invoke(this._fnBeforeSubmit);
+            }
 
             var cfg = S.merge(this.IOSetup, config);
             if(cfg.url == "" || cfg.url == "about:blank") {
