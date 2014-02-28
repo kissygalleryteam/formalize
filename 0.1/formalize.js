@@ -350,6 +350,7 @@ KISSY.add(function(S, D, E, IO) {
         /**
          * 表单提交
          * @param config
+         * @param invalidate 不校验。默认校验，即值为false
          * 同步支持的配置为：
          * {
          *     async: true/false,
@@ -359,7 +360,7 @@ KISSY.add(function(S, D, E, IO) {
          * }
          * 异步支持的配置： async以及IO的配置。
          */
-        submit: function(config, ignore) {
+        submit: function(config, invalidate) {
             config || (config = {});
 
             if(this._running || this.isDisabled()) return false;
@@ -367,17 +368,17 @@ KISSY.add(function(S, D, E, IO) {
             this.fire('emit', {data: config});
             this._running = true;
 
-            if(!ignore) {
+            if(!invalidate) {
                 // 校验前执行。若有校验返回值为false，则中断队列执行，中断提交操作。
                 if(this._invoke(this._validators, true) === false) {
                     this._running = false;
                     return;
                 }
-
-                // 提交前执行的函数
-                // 不在意函数的返回值。也不影响提交操作。
-                this._invoke(this._fnBeforeSubmit);
             }
+
+            // 提交前执行的函数
+            // 不在意函数的返回值。也不影响提交操作。
+            this._invoke(this._fnBeforeSubmit);
 
             var cfg = S.merge(this.IOSetup, config);
             if(cfg.url == "" || cfg.url == "about:blank") {
