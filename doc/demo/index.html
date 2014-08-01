@@ -1,0 +1,176 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>Formalize的demo</title>
+    <script src="http://g.tbcdn.cn/kissy/k/1.4.1/seed.js" charset="utf-8"></script>
+<script>var S = KISSY;S.config({packages:[{name:"kg",path:"http://g.tbcdn.cn/kg/",charset:"utf-8",ignorePackageNameInUri:true}]});if (S.Config.debug){var srcPath = "../";S.config({packages:[{name:"kg/formalize/2.0.0",path:srcPath,charset:"utf-8",ignorePackageNameInUri:true}]});}</script></head>
+<body>
+<h2>Formalize的demo</h2>
+
+
+<form action="data.json">
+
+    <fieldset id="demo1">
+        <legend>text</legend>
+        <input type="text" name="text1" disabled="disabled" />
+
+        <div class="result"></div>
+    </fieldset>
+
+    <fieldset id="demo2">
+        <legend>radio</legend>
+
+        <input type="radio" name="radio1" value="1"/>
+        <input type="radio" name="radio1" value="2"/>
+        <input type="radio" name="radio1" value="3"/>
+
+        <div class="result"></div>
+
+    </fieldset>
+
+    <fieldset id="demo3">
+        <legend>checkbox</legend>
+
+        <input type="checkbox" name="checkbox1" value="1"/>
+        <input type="checkbox" name="checkbox1" value="2"/>
+        <input type="checkbox" name="checkbox1" value="3"/>
+        <input type="checkbox" name="checkbox1" value="4"/>
+
+        <div class="result"></div>
+
+    </fieldset>
+
+    <fieldset id="demo4">
+        <legend>checkbox</legend>
+
+        <input type="checkbox" name="checkbox2" value="5"/>
+
+        <div class="result"></div>
+
+    </fieldset>
+
+    <fieldset id="demo5">
+        <legend>select</legend>
+
+        <select name="select1" id="">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+        </select>
+
+        <div class="result"></div>
+
+    </fieldset>
+
+    <div id="result-aa">aa</div>
+
+</form>
+
+
+<script>
+    var S = KISSY;
+    if (S.Config.debug) {
+        var srcPath = "../../";
+        S.config({
+            packages:[
+                {
+                    name:"kg/formalize",
+                    path:srcPath,
+                    charset:"utf-8",
+                    ignorePackageNameInUri:true
+                }
+            ]
+        });
+    }
+
+    S.use('kg/formalize/2.0.0/index, dom', function (S, Formalize, D) {
+        var fake = new Formalize(),
+            elForm = document.forms[0];
+
+        fake.attach(elForm);
+
+        console.log(S.clone(fake._fields))
+
+        fake.fieldEnable("text1");
+
+        fake.submit({
+            async: true,
+            url: "data.json",
+            data: {
+                t1: 1,
+                t2: 2
+            },
+            success: function(data) {
+                console.log(data)
+            }
+        });
+
+        fake.disable('1')
+        fake.disable('2')
+        fake.disable('3')
+        fake.enable('1');
+
+        fake.submit();
+
+        fake.getField('text1').setValue("test1");
+
+        fake.getField('radio1').setValue("2");
+
+        fake.getField('checkbox1').setValue(["1", "4"]);
+
+        fake.getField('checkbox2').setValue("5")
+
+        fake.getField('select1').setValue("3");
+
+
+        console.log(S.clone(fake._fields));
+
+        var el = D.create('<input name="new1" type="text"  value="" />');
+        elForm.appendChild(el);
+
+        // 一旦添加到对应的form表单中，就直接可以调用对应的方法来操作表单域～
+        fake.setValue("new1", 'new value');
+
+        console.log(S.clone(fake._fields));
+
+        fake.addField('aa', {
+            elem: D.get("#result-aa"),
+            getValue: function() {
+                return D.text(this.elem);
+            },
+            setValue: function(val) {
+                D.text(this.elem, val);
+            },
+            enable: function() {
+                D.show(this.elem);
+            },
+            disable: function() {
+                D.hide(this.elem);
+            }
+        });
+
+        console.log(fake.getValue('aa'));
+        fake.setValue('aa', '55');
+        console.log(fake.getValue('aa'));
+
+        setTimeout(function() {
+            fake.getField('text1').setValue("2222");
+
+            fake.getField('radio1').setValue("3");
+
+            fake.getField('checkbox1').setValue(["2", "3"]);
+
+            fake.getField('checkbox2').setValue()
+
+            fake.getField('select1').setValue("2")
+
+            fake.setValue('new1', "new again")
+
+        }, 1000);
+
+    })
+</script>
+</body>
+</html>
